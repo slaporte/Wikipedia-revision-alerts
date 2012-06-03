@@ -6,10 +6,10 @@ from twisted.python import log
 from twisted.mail.smtp import sendmail
 from email.mime.text import MIMEText
 import alert_db as db
-import time, sys, re
+import time, sys, re, datetime
 
-
-alert_list = {'Slaporte': ['stephen.laporte@gmail.com', False], 'create': ['stephenlaporte@gmail.com', False],}
+CHANNEL = 'en.wikipedia'
+LOG = 'log'
 
 def alert_terms(database='alerts'):
     ret = {}
@@ -64,12 +64,15 @@ class Revision:
 
         self.attr = ret
 
-    def mail(self, recipient):
+    def term(self, term):
+        self.term = term
+
+    def mail(self, recipient, term='unknown'):
         host = 'localhost'
-        from_addr = 'stephen.laporte@gmail.com'
+        from_addr = 'wikipedia.monitor@example.com'
         to_addrs = [recipient]
-        msg = MIMEText('Hello!\n\nThe page "' + self.attr['name'] + '" has been edited, see http://en.wikipedia.org/w/index.php?title=' + self.attr['name'].replace(' ', '_') + '&oldid=' + self.attr['revid'])
-        msg['Subject'] = 'Edit to '
+        msg = MIMEText('Hello!\n\nThe page "' + self.attr['name'] + '" has been edited (see http://en.wikipedia.org/w/index.php?title=' + self.attr['name'].replace(' ', '_') + '&oldid=' + self.attr['revid'] + ').\n\nYou received this alert because it contained the term "' + self.term + '". Adjust your alert preferences here: http://localhost:8080/list/' + recipient + '\n\nCheers!')
+        msg['Subject'] = 'Edit to ' + self.attr['name']
         msg['From'] = from_addr
         msg['To'] = ', '.join(to_addrs)
 
@@ -98,6 +101,7 @@ class MessageLogger:
 class AlertBot(irc.IRCClient):
     
     nickname = "AlertBot"
+    rate = [datetime.datetime.now()]
     
     def connectionMade(self):
         irc.IRCClient.connectionMade(self)
@@ -129,8 +133,10 @@ class AlertBot(irc.IRCClient):
                     pass
                 else:
                     self.logger.log("Match: %s; Title: %s; User: %s, Summary: %s" % (word, new_revision.attr['name'], new_revision.attr['user'], new_revision.attr['summary']))
+                    new_revision.term(word)
                     new_revision.mail(email)
-
+        #self.rate.append(datetime.datetime.now())
+        #self.rate = [recent for recent in self.rate if recent > datetime.datetime.now() + datetime.timedelta(minutes=-1)]
 
 class AlertBotFactory(protocol.ClientFactory):
     def __init__(self, channel, filename):
@@ -154,7 +160,7 @@ class AlertBotFactory(protocol.ClientFactory):
 if __name__ == '__main__':
     log.startLogging(sys.stdout)
     
-    f = AlertBotFactory(sys.argv[1], sys.argv[2])
+    f = AlertBotFactory(CHANNEL, LOG)
 
     reactor.connectTCP("irc.wikimedia.org", 6667, f)
 

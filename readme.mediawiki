@@ -1,0 +1,23 @@
+Use '''Wikipedia revision alerts''' to receive email updates for terms that appear in users, article titles, or edit summaries. For example, add an alert for the term "Wikipedia:Articles for deletion" to receive an alert when an article is nominated for deletion.
+
+== Installation ==
+* Uses python and sqlite.
+* Run <code>pip install -r requirements.txt</code>
+
+== Operation ==
+There are two services:
+* <code>alert_monitor.py</code>: service for monitoring recent changes and sending alerts
+* <code>alert_server.py</code>: web service for adding or modifying alerts, runs on localhost port 8080 by default
+
+It requires an SMTP server to send email notifications. It by default, it uses localhost.
+
+== About ==
+Built using [http://twistedmatrix.com twisted] (for IRC and SMTP), [http://bottlepy.org/ bottle] (a simple web framework), [https://github.com/coleifer/peewee peewee] (a simple ORM). 
+
+Written by [http://thjnk.com Stephen LaPorte] for the [http://www.mediawiki.org/wiki/Berlin_Hackathon_2012 Berlin Hackathon 2012]. This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+
+== Todo ==
+* Email authentication and password protection
+* Email digest mode
+* Other service alerts (RSS? [http://ifttt.com/ ifttt]?)
+* More specific term syntax

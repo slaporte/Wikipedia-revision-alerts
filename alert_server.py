@@ -1,4 +1,4 @@
-from bottle import route, run, post, request
+from bottle import route, run, post, request, view, redirect
 import alert_db as db
 
 
@@ -15,17 +15,27 @@ def select_by_email(r_email, database='alerts'):
             })
     return ret
 
+@route('/edit_rate')
+def get_rate():
+    elog = open('edits', 'r')
+    return elog.read()
+
+@route('/l')
+def reroute():
+    redirect('/list/' + request.query.email)
 
 @route('/list/:email')
+@view('list')
 def list(email='stephen.laporte@gmail.com'):
-    ret = '<ul>'
     terms = select_by_email(email)
-    for a in terms:
-        ret += '<li>' + terms[a]['email'] + ' : ' + a + ' -- <form <form method="post" action="http://localhost:8080/remove"><input type="hidden" name="remove_id" value="' +  terms[a]['id'] + '"><button type="Submit">Delete</botton></form></li>'
-    ret += '</ul>'
-    return ret
+    return dict(terms=terms, email=email, new_form=new)
+
+@route('/list/')
+def reroute():
+    redirect('/')
 
 @post('/add')
+@view('add')
 def add_term():
     p_term    = request.forms.term
     p_email   = request.forms.email
@@ -35,31 +45,51 @@ def add_term():
         db.init()
         new_alert = db.Alert(email=p_email, term=p_term, wait=p_wait)
         new_alert.save()
-        return 'Worked! Added ' + p_term + ' for you.'
-    return 'Missed something'
+        return dict(alert='Worked! Added an alert for "' + p_term + '"', type='success')
+    return dict(alert='Missed something', type='error')
 
 
 @post('/remove')
+@view('remove')
 def remove_term():
     p_id    = request.forms.remove_id
-
     if p_id:
         db.init()
         db.pw.DeleteQuery(db.Alert).where(id=p_id).execute()
-        return 'Worked! Removed ' + p_id + ' for you.'
-    return 'Missed something'
+        return dict(alert='Alert removed.', type='success')
+    return dict(alert='Oops, something did not work.', type='error')
 
 @route('/')
+@view('index')
 def index():
-    return '''
-<html>
-<form method='post' action='http://localhost:8080/add'>
-name: <input name='term'>
-email: <input name='email'>
-wait: <input name='wait'>
-<button type='submit' value='Submit' name='submit'>Submit</botton>
+    return dict(new_form=new, manage_form=manage)
+
+new = '''
+<form class='well form-inline' method='post' action='http://localhost:8080/add'>
+<fieldset>
+<legend>Add an alert</legend>
+<div class="input-prepend">
+<span class="add-on"><i class="icon-tag"></i></span><input type='text' class='input-xlarge' id='term' name='term' placeholder='term'>
+</div>
+<div class="input-prepend">
+<span class="add-on"><i class="icon-envelope"></i></span><input type='text' class='input-xlarge' id='email' name='email' placeholder='email'>
+</div>
+<input type='hidden' id='wait' name='wait' value='False'>
+<button type='submit' value='Submit' name='submit' class='btn'>Submit</botton>
+</fieldset>
+</form>'''
+
+manage = '''
+<form class='well form-inline' method='get' action='http://localhost:8080/l'>
+<fieldset>
+<legend>Manage alerts</legend>
+<div class="input-prepend">
+<span class="add-on"><i class="icon-envelope"></i></span><input type='text' class='input-xlarge' id='email' name='email' placeholder='email'>
+</div>
+<button type='submit' class='btn blue'>Submit</botton>
+</fieldset>
 </form>
-</html>
 '''
+
 if __name__ == '__main__':
     run(host='localhost', port=8080)
